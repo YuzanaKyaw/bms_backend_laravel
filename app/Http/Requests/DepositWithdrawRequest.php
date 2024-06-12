@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class StoreUserRequest extends FormRequest
+class DepositWithdrawRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -23,22 +23,17 @@ class StoreUserRequest extends FormRequest
      */
     public function rules(): array
     {
-
         return [
-            'username' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'balance' => ['nullable'],
-            'isDelete' => '',
-            'isDeactivate' => '',
-            'stateCode' => ['required'],
-            'townshipCode'=> ['required'],
+            'transactionType' => 'required',
+            'accountNo' => 'required|exists:users,accountNo',
+            'amount' => 'required',
         ];
     }
 
-    public function failedValidation(Validator $validator) {
+    public function failedValidation(Validator $validator){
         throw new HttpResponseException(response()->json([
             'success' => false,
-            'message' => 'Validation errors',
+            'message' => 'Validation Error',
             'data' => $validator->errors()
         ]));
     }

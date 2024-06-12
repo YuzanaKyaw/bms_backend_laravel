@@ -23,10 +23,12 @@ class AdminRegisterRequest extends FormRequest
     {
         return [
             'adminCode'=> '',
+            'email'=> 'required',
             'name'=> 'required|min:3',
+            'role'=> 'required|in:admin,employee',
             'password'=>'required',
-            
-            
+
+
         ];
     }
 }

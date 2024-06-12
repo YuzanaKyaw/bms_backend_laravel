@@ -7,6 +7,9 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Admin\AdminAuthController;
+use App\Http\Controllers\TransactionController;
+
+use App\Http\Controllers\DepositWithdrawController;
 // use App\Http\Controllers\Auth\LoginController;
 
 /*
@@ -23,43 +26,50 @@ use App\Http\Controllers\Admin\AdminAuthController;
 // Route::middleware('auth:sanctum')->get('/user', function (Request $request) {
 //     return $request->user();
 // });
-Route::post('v1/admin/login', [AdminAuthController::class, 'login']);
-
-Auth::routes();
-Route::post('user/login',[LoginController::class,'login']);
 
 
 
-
-// Route::middleware(['admin_auth'])->group(function() {
-//     Route::prefix('admin')->group(function(){
-//         Route::get('admin',[AdminController::class,'index']);
-//         Route::get('userlist',[UserController::class,'index']);
-//     });
-// });
+Route::post('v1/admins/login', [AdminAuthController::class, 'login']);
 
 
     Route::group(['prefix' => 'v1','middleware' => 'auth:sanctum'], function () {
-        Route::middleware(['admin_auth'])->prefix('admin')->group(function() {
-            Route::post('/admin-register', [AdminController::class, 'insert']);
-            Route::post('/user-register',[UserController::class,'userRegister']);
-            // Route::get('/user_accept_or_reject', [AdminController::class, 'getAllPendingUsers']);
-            // Route::patch('/user_accept_or_reject/{accountNo}', [AdminController::class, 'userAcceptOrReject']);
+        Route::middleware(['admin_auth', 'check.deactivate'])->group(function() {
+
+            Route::post('admins', [AdminController::class, 'insert']);
+            Route::get('/admins', [AdminController::class, 'index'])->middleware('check.softDelete');
+
+
+            Route::prefix('admins')->group(function(){
+
+                Route::put('/update', [AdminController::class, 'update']);
+                Route::post('/logout', [AdminAuthController::class, 'logout']);
+                Route::post('actions',[AdminController::class,'accountActions']);
+
+
+                Route::prefix('users')->group(function(){
+                    Route::post('/registrations',[UserController::class,'userRegister']);
+                    Route::post('/actions',[UserController::class,'userAccActions']);
+                    Route::post('/transactions', [TransactionController::class, 'createTransaction']);
+
+                });
+            });
+
+
+            // Route::post('/users/account-deactivate',[UserController::class,'accountDeactivate']);
+            // Route::post('/users/account-delete',[UserController::class,'accountDelete']);
+            // Route::post('/admin-register', [AdminController::class, 'insert']);
             Route::get('admin',[AdminController::class,'index']);
             Route::get('userlist',[UserController::class,'index']);
 
+
+            // Route::post('deposit',[DepositWithdrawController::class,'deposit']);
+            // Route::post('withdraw', [DepositWithdrawController::class,'withdraw']);
+
+
+            Route::get('users', [UserController::class, 'index']);
+            // Route::get('users/transactions')
         });
 
-
-    // Route::middleware(['user_auth'])->prefix('user')->group(function() {
-
-    //     Route::get('home', function() {
-    //         return "This is user home";
-    //     });
-
-    //     Route::get('testing',[UserController::class,'index']);
-
-    // });
 
 });
 

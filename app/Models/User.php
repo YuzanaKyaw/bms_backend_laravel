@@ -3,8 +3,10 @@
 namespace App\Models;
 
 // use Illuminate\Contracts\Auth\MustVerifyEmail;
+use App\Models\Admin;
 use Laravel\Sanctum\HasApiTokens;
 use Illuminate\Notifications\Notifiable;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 
@@ -23,16 +25,23 @@ class User extends Authenticatable
      * @var array<int, string>
      */
     protected $fillable = [
+        'userCode',
         'accountNo',
         'username',
+        'fullName',
         'email',
         'phone',
         'balance',
         'isDelete',
         'isDeactivate',
         'stateCode',
-        'townshipCode'
+        'townshipCode',
+        'adminId'
     ];
+
+    public function admin(): BelongsTo{
+        return $this->belongsTo(Admin::class,'adminId');
+    }
 
     /**
      * The attributes that should be hidden for serialization.

@@ -15,8 +15,12 @@ return new class extends Migration
             $table->id();
             $table->string('adminCode');
             $table->string('name');
+            $table->string('email')->unique();
             $table->string('password');
+            $table->boolean('isDelete')->default(0);
+            $table->boolean('isDeactivate')->default(0);
             $table->enum('role',['admin', 'employee'])->default('employee');
+            $table->string('managerId')->nullable();
             $table->rememberToken();
             $table->timestamps();
         });

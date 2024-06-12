@@ -6,7 +6,7 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Contracts\Validation\Validator;
 use Illuminate\Http\Exceptions\HttpResponseException;
 
-class StoreUserRequest extends FormRequest
+class UserAccActionRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
@@ -23,15 +23,9 @@ class StoreUserRequest extends FormRequest
      */
     public function rules(): array
     {
-
         return [
-            'username' => ['required', 'string', 'max:255'],
-            'email' => ['required', 'string', 'email', 'max:255', 'unique:users'],
-            'balance' => ['nullable'],
-            'isDelete' => '',
-            'isDeactivate' => '',
-            'stateCode' => ['required'],
-            'townshipCode'=> ['required'],
+            "process" => "required|string|in:activate,deactivate,search,delete",
+            "data.accountNo" => "required|string|exists:users,accountNo"
         ];
     }
 
