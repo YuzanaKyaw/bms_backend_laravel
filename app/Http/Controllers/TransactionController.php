@@ -2,30 +2,35 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\DepositWithdrawRequest;
+use Carbon\Carbon;
 
-use App\Http\Resources\DepositWithdrawResource;
-use App\Http\Resources\TransferResource;
-use App\Http\Resources\UserResource;
-use App\Models\DepositWithdraw;
 use App\Models\Transfer;
+use Illuminate\Support\Arr;
+use Illuminate\Http\Request;
+use App\Services\AdminService;
 use App\Services\DepositWithdrawService;
 use App\Services\TransferService;
 use App\Services\UserService;
 use App\Traits\HttpResponses;
-use Carbon\Carbon;
-use Illuminate\Http\Request;
-use Illuminate\Support\Arr;
+use App\Services\AdminService;
+use App\Models\DepositWithdraw;
+use App\Services\TransferService;
+use App\Http\Resources\UserResource;
 use Illuminate\Support\Facades\Auth;
+use App\Http\Resources\TransferResource;
+use App\Services\DepositWithdrawService;
+use App\Http\Requests\DepositWithdrawRequest;
+use App\Http\Resources\DepositWithdrawResource;
 
 class TransactionController extends Controller
 {
     use HttpResponses;
 
-    protected $transfer, $user, $depositWithdraw;
+    protected $transfer, $user, $depositWithdraw, $admin;
 
-    public function __construct(UserService $user, TransferService $transfer, DepositWithdrawService $depositWithdraw)
+    public function __construct(UserService $user,AdminService $admin, TransferService $transfer, DepositWithdrawService $depositWithdraw)
     {
+        $this->admin = $admin;
         $this->user = $user;
         $this->transfer = $transfer;
         $this->depositWithdraw = $depositWithdraw;
@@ -47,10 +52,10 @@ class TransactionController extends Controller
                 return $this->depositOrWithDraw($transferRequest);
             case 'withdraw':
                 return $this->depositOrWithDraw($transferRequest);
-            case 'withdraw':
-                return $this->depositOrWithDraw($transferRequest);
+            case 'withdraw':           
+                return $this->depositOrWithDraw($transferRequest);           
             case 'adminlist':
-                return $this->adminlist($transferRequest);
+                return $this->adminlist($transferRequest);       
 
             default:
                 return response()->json('This process is invalid', 400);
@@ -63,7 +68,7 @@ class TransactionController extends Controller
     public function transfer($transferRequest)
     {
 
-        $validated =  $transferRequest->validate([
+      $validated =  $transferRequest->validate([
             'data.sender' => 'required|exists:users,accountNo',
             'data.receiver'=> 'required|exists:users,accountNo',
             'data.transferAmount'=> 'required'
@@ -73,10 +78,10 @@ class TransactionController extends Controller
         $validated['data']['date'] = Carbon::now()->toDateString();
         $validated['data']['time'] = Carbon::now()->toTimeString();
 
-
+        
         $senderAccountNo = $validated['data']['sender'];
         $receiverAccountNo = $validated['data']['receiver'];
-
+    
         // Check user accounts are deactivated or deleted
         // $this->checkStatus($senderAccountNo);
         // $this->checkStatus($receiverAccountNo);
@@ -85,23 +90,6 @@ class TransactionController extends Controller
         $senderAccount = $this->user->getUserByAccountNo($validated['data']['sender']);
         $receiverAccount = $this->user->getUserByAccountNo($validated['data']['receiver']);
 
-        if($senderAccount == null || $receiverAccount == null){
-            return response()->json([
-                'success' => false,
-                'message' => "Account not found!"
-            ],404);
-        }
-        if($senderAccount->isDeactivate || $receiverAccount->isDeactivate){
-            return response()->json([
-                'success' => false,
-                'message' => "Account was freezed!"
-            ]);
-        }else if($senderAccount->isDelete || $receiverAccount->isDelete){
-            return response()->json([
-                'success' => false,
-                'message' => "Account was delete!"
-            ]);
-        }
         $transferAmount = $validated['data']['transferAmount'];
 
         $senderBalance = $senderAccount->balance - $transferAmount;
@@ -139,7 +127,7 @@ class TransactionController extends Controller
         $type = $validated['process'];
         $adminId = Auth::id();
         $date = Carbon::now()->toDateString();
-        $time = Carbon::now()->toTimeString();
+       $time = Carbon::now()->toTimeString();
 
         $user = $this->user->getUserByAccountNo($accountNo); // get user account data
         if($user->isDeactivate){  // checking if the account is freeze or not
@@ -234,24 +222,78 @@ class TransactionController extends Controller
 
     }
 
+    public function list($transferRequest)
+    {
+        if (isset($transferRequest->data['accountNo'])) {
+            $validated = $transferRequest->validate([
+                'data.accountNo'=> 'required'
+            ]);
+            $accountNo = $validated['data']['accountNo'];
+
+            $transfers = Transfer::where('sender',$accountNo)->get();
+
+
+
+            $withdraws = DepositWithdraw::where('process', 'withdraw')
+            ->orWhere('process', 'deposit')
+            ->where('accountNo',$accountNo)
+            ->get();
+
+
+
+            // $transactions = $withdraws->merge($transfers);
+              $transactions = collect(Arr::collapse([$transfers,$withdraws]));
+
+
+
+            $orderTransactions = $transactions->sortByDesc('created_at')->values()->all();
+
+        }else{
+            $validated = $transferRequest->validate([
+                'data.username'=> 'required'
+            ]);
+
+            $accountNo = $validated['data']['username'];
+        }
+
+
+
+        return response()->json([
+            'transactions'=>$orderTransactions
+
+        ]);
+
+    }
+
+    public function transactionList(){
+        $transferList = Transfer::get();
+        $depositWithdrawList = DepositWithdraw::get();
+
+        $transactionList = collect(Arr::collapse([$transferList,$depositWithdrawList]));
+
+        $orderList = $transactionList->sortByDesc('created_at')->values()->all();
+
+        return $this->success('success',$orderList,200);
+    }
+
     // public function checkStatus($accountNo)
     // {
     //     if ($this->user->checkDeactivate($accountNo) == 1 ) {
     //         return $this->error(null, "Cannot Transfer, The sender's account has been deactivated", 204);
     //      }
-
+ 
     //      if ($this->user->checkDeactivate($accountNo) == 1) {
     //          return $this->error(null, "Cannot Transfer, The receiver's account has been deactivated", 204);
     //       }
-
+        
     //       if ($this->user->checkDelete($accountNo) == 1 ) {
     //         return $this->error(null, "Cannot Transfer, The sender's account has been freezed", 204);
     //      }
-
+ 
     //      if ($this->user->checkDelete($accountNo) == 1) {
     //          return $this->error(null, "Cannot Transfer, The receiver's account has been freezed", 204);
     //       }
-
-
+        
+ 
     // }
 }
